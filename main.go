@@ -48,7 +48,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			if err = session.Query(`INSERT INTO test.testers (id, values, counter) VALUES (?, ?, ?)`,
-				rand.Int31(), randomStr, rand.Int31()).Exec(); err != nil {
+				rand.Int31(), randomStr(), rand.Int31()).Exec(); err != nil {
 				log.Printf("ERROR - %v", err)
 				atomic.AddInt64(&errors, 1)
 			} else {
