@@ -54,6 +54,7 @@ func main() {
 			} else {
 				atomic.AddInt64(&success, 1)
 			}
+			wg.Done()
 		}()
 	}
 	log.Printf("%v successful %v failed", success, errors)
