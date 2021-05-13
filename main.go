@@ -17,7 +17,7 @@ func main() {
 	port := flag.Int("port", 9042, "port to use to connect too")
 	threads := flag.Int("threads", 100, "number of threads to use")
 	records := flag.Int64("records", 1000000, "total number of records to write")
-	rf := flag.Int64("rf", 1, "number of replicas to create if keyspace not present")
+	rf := flag.Int("rf", 1, "number of replicas to create if keyspace not present")
 
 	flag.Parse()
 	rawHosts := strings.Split(*hosts, ",")
@@ -33,7 +33,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = session.Query("CREATE KEYSPACE IF NOT EXISTS test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': %v }", *rf).Exec()
+	err = session.Query(fmt.Sprintf("CREATE KEYSPACE IF NOT EXISTS test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': %v }", *rf)).Exec()
 	if err != nil {
 		log.Fatal(err)
 	}
