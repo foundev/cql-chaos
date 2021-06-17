@@ -1,3 +1,18 @@
+/**
+  Copyright 2021 Ryan SVIHLA
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+*/
 package main
 
 import (
@@ -6,8 +21,6 @@ import (
 	"log"
 	"math/rand"
 	"strings"
-	"sync"
-	"sync/atomic"
 
 	"github.com/gocql/gocql"
 )
@@ -17,7 +30,10 @@ func main() {
 	port := flag.Int("port", 9042, "port to use to connect too")
 	threads := flag.Int("threads", 100, "number of threads to use")
 	records := flag.Int64("records", 1000000, "total number of records to write")
+	progressInterval := flag.Int64("progressInterval", 10000, "every x records log progress")
 	rf := flag.Int("rf", 1, "number of replicas to create if keyspace not present")
+	scenario := flag.String("scenario", "default", "run a specified scenario; run -showScenarios to see all")
+	verbose := flag.Bool("verbose", false, "turn on verbose output or not")
 
 	flag.Parse()
 	rawHosts := strings.Split(*hosts, ",")
@@ -33,45 +49,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	err = session.Query(fmt.Sprintf("CREATE KEYSPACE IF NOT EXISTS test WITH replication = {'class': 'SimpleStrategy', 'replication_factor': %v }", *rf)).Exec()
-	if err != nil {
-		log.Fatal(err)
+	scenarioRunner := ScenarioRunner{
+		ThreadsInFlight:  int64(*threads),
+		ProgressInterval: *progressInterval,
+		Records:          *records,
+		Verbose:          *verbose,
 	}
-	err = session.Query("CREATE TABLE IF NOT EXISTS test.testers (id int, values text, counter int, PRIMARY KEY(id, values))").Exec()
-	if err != nil {
-		log.Fatal(err)
+	var scenarioRuntime Scenario
+	switch *scenario {
+	case "default":
+		scenarioRuntime = &DefaultScenario{Session: session, RF: *rf}
+	case "high-cells-tiny-part":
+		scenarioRuntime = &HighCellsTinyPartScenario{Session: session, PossibleIds: 100, RF: *rf}
+	default:
+		log.Fatalf("no scenario named %v was found", *scenario)
 	}
-	err = session.Query("CREATE SEARCH INDEX IF NOT EXISTS on test.testers").Exec()
-	if err != nil {
-		log.Fatal(err)
-	}
-	var wg sync.WaitGroup
-
-	var success int64
-	var errors int64
-	threadsFlight := int64(*threads)
-	progressInterval := int64(10000)
-	var i int64
-	for i = 0; i < *records; i++ {
-		if i%progressInterval == 0 {
-			log.Printf("%v of %v records attempted", i+1, *records)
-		}
-		if i%threadsFlight == 0 {
-			wg.Wait()
-		}
-		wg.Add(1)
-		go func() {
-			if err = session.Query(`INSERT INTO test.testers (id, values, counter) VALUES (?, ?, ?)`,
-				rand.Int31(), randomStr(), rand.Int31()).Exec(); err != nil {
-				log.Printf("ERROR - %v", err)
-				atomic.AddInt64(&errors, 1)
-			} else {
-				atomic.AddInt64(&success, 1)
-			}
-			wg.Done()
-		}()
-	}
-	log.Printf("%v successful %v failed", success, errors)
+	result := scenarioRunner.Run(scenarioRuntime)
+	fmt.Println(result.Report())
 }
 
 func randomStr() string {

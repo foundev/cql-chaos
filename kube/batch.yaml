@@ -1,0 +1,13 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: cqlchaos
+spec:
+  template:
+    spec:
+      containers:
+      - name: cqlchaos
+        image: ryansvihla/cqlchaos:v0.0.3
+        command: ["./cqlchaos",  "-hosts=cluster1-dc1-all-pods-service"]
+      restartPolicy: Never
+  backoffLimit: 4
