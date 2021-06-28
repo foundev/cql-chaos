@@ -26,6 +26,7 @@ import (
 )
 
 func main() {
+	help := flag.Bool("h", false, "show command help")
 	hosts := flag.String("hosts", "localhost", "specify hosts separated by comma")
 	port := flag.Int("port", 9042, "port to use to connect too")
 	threads := flag.Int("threads", 100, "number of threads to use")
@@ -36,6 +37,11 @@ func main() {
 	verbose := flag.Bool("verbose", false, "turn on verbose output or not")
 
 	flag.Parse()
+
+	if *help {
+		flag.Usage()
+		return
+	}
 	rawHosts := strings.Split(*hosts, ",")
 
 	var contactPoints []string
@@ -59,10 +65,13 @@ func main() {
 	switch *scenario {
 	case "default":
 		scenarioRuntime = &DefaultScenario{Session: session, RF: *rf}
+	case "single-part":
+		scenarioRuntime = &SinglePartScenario{Session: session, RF: *rf}
 	case "high-cells-tiny-part":
 		scenarioRuntime = &HighCellsTinyPartScenario{Session: session, PossibleIds: 100, RF: *rf}
 	default:
-		log.Fatalf("no scenario named %v was found", *scenario)
+		log.Printf("no scenario named %v was found", *scenario)
+		flag.Usage()
 	}
 	result := scenarioRunner.Run(scenarioRuntime)
 	fmt.Println(result.Report())

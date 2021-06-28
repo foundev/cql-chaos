@@ -50,6 +50,9 @@ type ScenarioRunner struct {
 }
 
 func (r *ScenarioRunner) Run(scene Scenario) ScenarioResult {
+	if err := scene.Init(); err != nil {
+		log.Fatalf("unable to initialze scenario with error %v", err)
+	}
 	var wg sync.WaitGroup
 
 	var success int64

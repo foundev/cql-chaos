@@ -7,7 +7,8 @@ spec:
     spec:
       containers:
       - name: cqlchaos
-        image: ryansvihla/cqlchaos:v0.0.3
-        command: ["./cqlchaos",  "-hosts=cluster1-dc1-all-pods-service"]
+        image: ryansvihla/cqlchaos:latest
+        imagePullPolicy: Always
+        command: ["./cqlchaos",  "-hosts=dse-cluster-datastax-dse-0.dse-cluster-datastax-dse" , "-scenario=single-part", "-rf=2"]
       restartPolicy: Never
   backoffLimit: 4
